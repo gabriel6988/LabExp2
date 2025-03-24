@@ -24,7 +24,7 @@ headers = {'Authorization': f'token {GITHUB_TOKEN}'}
 def get_top_repositories():
     repositories = []
     
-    for page in range(1, 2):  # Buscando os primeiros 1000 repositórios, 100 por página
+    for page in range(1, 11):  # Buscando os primeiros 1000 repositórios, 100 por página
         response = requests.get(API_URL.format(page=page), headers=headers)
         if response.status_code == 200:
             data = response.json()
@@ -294,8 +294,6 @@ def write_to_csv(data):
         
         writer.writerow(data)
 
-import csv
-import os
 
 def check_repo_in_csv(repo_name):
     if not os.path.exists('resultados.csv'):
