@@ -65,6 +65,7 @@ def execute_ck_repositories(repositories):
         if (check_repo_in_csv(repo["name"]) == False):
             owner = repo["owner"]["login"]
             rep_name = repo["name"]
+            print ("Executando CK para: " + rep_name)
             branch = repo["default_branch"]
             locNumber = countLinesInDirectory(rep_name)
             starsNumber =  repo["stargazers_count"]
@@ -86,14 +87,10 @@ def execute_ck_repositories(repositories):
             repo_path = os.path.join(REPO_DIR, repo_name)
             
             if os.path.exists(repo_path):
-                try:
-                    result = subprocess.run(
-                        ['java', '-jar', ck_jar_path, repo_path],
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                    )
-                    
+                ck_cmd = ['java', '-jar', ck_jar_path, repo_path]
+                result = run_ck_with_timeout(ck_cmd,timeout_seconds=180)
+                
+                if result:
                     if (is_csv_empty('class.csv')):
                         ck_executed = False
                     else:
@@ -124,11 +121,9 @@ def execute_ck_repositories(repositories):
                         }
                         
                         write_to_csv(repo_data)
-                    
-                    print ("concluido")
-                except subprocess.CalledProcessError as e:
-                    print(f"Erro ao executar o CK: {e}")
-                    print(f"Saída de erro: {e.stderr}")
+                        
+                        print ("concluido")
+               
 
 def create_repositories_csv(repositories): 
     csv_file_path = "repositorios.csv"
@@ -147,8 +142,8 @@ def create_repositories_csv(repositories):
 def main():
     print("Buscando os 1000 principais repositórios Java...")
     repositories = get_top_repositories()
-    create_repositories_csv(repositories)
-    clone_repositories(repositories)
+    # create_repositories_csv(repositories)
+    # clone_repositories(repositories)
     execute_ck_repositories(repositories)
 
 def countLinesInDirectory(directory):
@@ -263,13 +258,14 @@ def getCboData(cbo_values):
     cbo_medio = getMediumValue(cbo_values)
     mediana_cbo = getMedian(cbo_values)
     desvio_padrao_cbo = getStandardDeviation(cbo_values)
-    return {cbo_medio: cbo_medio, mediana_cbo: mediana_cbo, desvio_padrao_cbo: desvio_padrao_cbo}
+    
+    return cbo_medio, mediana_cbo, desvio_padrao_cbo
 
 def getDitData(dit_values):
     dit_medio = getMediumValue(dit_values)
     mediana_dit = getMedian(dit_values)
     desvio_padrao_dit = getStandardDeviation(dit_values)
-    return {dit_medio: dit_medio, mediana_dit: mediana_dit, desvio_padrao_dit: desvio_padrao_dit}
+    return  dit_medio, mediana_dit, desvio_padrao_dit
 
 def getLcomData(lcom_values):
     lcom_medio = getMediumValue(lcom_values)
@@ -306,6 +302,24 @@ def check_repo_in_csv(repo_name):
                 return True
 
     return False 
+
+def run_ck_with_timeout(cmd, timeout_seconds):
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds 
+        )
+        return result
+    except subprocess.TimeoutExpired:
+        print(f"Erro: O comando '{cmd}' atingiu o tempo limite de {timeout_seconds} segundos.")
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"Erro ao executar o CK: {e}")
+        print(f"Saída de erro: {e.stderr}")
+        return None
 
 if __name__ == "__main__":
     main()
